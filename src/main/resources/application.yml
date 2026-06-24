@@ -22,3 +22,18 @@ logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.orm.jdbc.bind: trace
+
+scoremate:
+  football-data:
+    base-url: https://api.football-data.org/v4
+    api-token: ${FOOTBALL_DATA_API_TOKEN:}
+    mock-enabled: false
+  prediction:
+    missing-penalty: 10
+  jwt:
+    secret: ${JWT_SECRET:change-this-secret-in-production}
+    access-token-ttl-seconds: 3600
+    refresh-token-ttl-seconds: 1209600
+  scheduler:
+    sync-upcoming-cron: "0 0 4 * * *"
+    sync-today-delay-ms: 1800000
