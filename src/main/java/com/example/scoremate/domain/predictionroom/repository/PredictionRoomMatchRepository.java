@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public interface PredictionRoomMatchRepository extends JpaRepository<PredictionRoomMatch, Long> {
     List<PredictionRoomMatch> findByRoomId(Long roomId);
+    List<PredictionRoomMatch> findByFootballMatchId(Long footballMatchId);
     Optional<PredictionRoomMatch> findByRoomIdAndFootballMatchId(Long roomId, Long footballMatchId);
     long countByFootballMatchId(Long footballMatchId);
 }

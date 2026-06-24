@@ -6,6 +6,8 @@ import com.example.scoremate.domain.football.dto.AdminSyncDtos.SyncResultRespons
 import com.example.scoremate.domain.football.dto.AdminSyncDtos.UpdateMatchResultRequest;
 import com.example.scoremate.domain.football.dto.FootballDtos.CalendarMatchCountResponse;
 import com.example.scoremate.domain.football.dto.FootballDtos.LeagueResponse;
+import com.example.scoremate.domain.football.dto.FootballDtos.ActiveRoomResponse;
+import com.example.scoremate.domain.football.dto.FootballDtos.MatchDetailResponse;
 import com.example.scoremate.domain.football.dto.FootballDtos.MatchSummaryResponse;
 import com.example.scoremate.domain.football.dto.FootballDtos.TeamResponse;
 import com.example.scoremate.domain.football.entity.*;
@@ -15,6 +17,11 @@ import com.example.scoremate.domain.football.repository.FootballMatchRepository;
 import com.example.scoremate.domain.football.repository.LeagueRepository;
 import com.example.scoremate.domain.football.repository.TeamRepository;
 import com.example.scoremate.domain.prediction.dto.PredictionStatus;
+import com.example.scoremate.domain.prediction.repository.ScorePredictionRepository;
+import com.example.scoremate.domain.predictionroom.entity.PredictionRoom;
+import com.example.scoremate.domain.predictionroom.entity.PredictionRoomMatch;
+import com.example.scoremate.domain.predictionroom.repository.PredictionRoomMatchRepository;
+import com.example.scoremate.domain.predictionroom.repository.PredictionRoomParticipantRepository;
 import com.example.scoremate.global.exception.BusinessException;
 import com.example.scoremate.global.exception.ErrorCode;
 import com.example.scoremate.global.response.PageResponse;
@@ -42,6 +49,9 @@ public class FootballMatchService {
     private final FavoriteTeamRepository favoriteTeamRepository;
     private final FootballDataProvider footballDataProvider;
     private final CurrentUserProvider currentUserProvider;
+    private final PredictionRoomMatchRepository roomMatchRepository;
+    private final PredictionRoomParticipantRepository participantRepository;
+    private final ScorePredictionRepository scorePredictionRepository;
 
     @Transactional(readOnly = true)
     public PageResponse<MatchSummaryResponse> search(LocalDate date, LocalDateTime from, LocalDateTime to, Long leagueId, Boolean favoriteOnly, MatchStatus status, Pageable pageable) {
@@ -72,9 +82,34 @@ public class FootballMatchService {
     }
 
     @Transactional(readOnly = true)
-    public MatchSummaryResponse detail(Long matchId) {
+    public MatchDetailResponse detail(Long matchId) {
         FootballMatch match = getMatch(matchId);
-        return MatchSummaryResponse.from(match, PredictionStatus.NOT_SUBMITTED);
+        Long userId = resolveNullableUserId();
+        List<ActiveRoomResponse> activeRooms = roomMatchRepository.findByFootballMatchId(matchId).stream()
+                .map(PredictionRoomMatch::getRoom)
+                .filter(room -> userId != null && participantRepository.existsByRoomIdAndUserId(room.getId(), userId))
+                .map(room -> activeRoom(room, matchId, userId))
+                .toList();
+        PredictionStatus myPredictionStatus = activeRooms.stream()
+                .findFirst()
+                .map(ActiveRoomResponse::myPredictionStatus)
+                .orElse(PredictionStatus.NOT_SUBMITTED);
+        boolean locked = !match.getKickoffTime().isAfter(LocalDateTime.now());
+        return new MatchDetailResponse(
+                match.getId(),
+                LeagueResponse.from(match.getLeague()),
+                TeamResponse.from(match.getHomeTeam()),
+                TeamResponse.from(match.getAwayTeam()),
+                match.getKickoffTime(),
+                match.getStatus(),
+                match.getHomeScore(),
+                match.getAwayScore(),
+                match.getVenue(),
+                match.getKickoffTime(),
+                locked,
+                myPredictionStatus,
+                activeRooms
+        );
     }
 
     @Transactional(readOnly = true)
@@ -183,14 +218,38 @@ public class FootballMatchService {
     }
 
     private boolean isFavoriteMatch(FootballMatch match) {
-        try {
-            Long userId = currentUserProvider.resolveUserId();
-            return favoriteLeagueRepository.existsByUserIdAndLeagueId(userId, match.getLeague().getId())
-                    || favoriteTeamRepository.existsByUserIdAndTeamId(userId, match.getHomeTeam().getId())
-                    || favoriteTeamRepository.existsByUserIdAndTeamId(userId, match.getAwayTeam().getId());
-        } catch (BusinessException e) {
+        Long userId = resolveNullableUserId();
+        if (userId == null) {
             return false;
         }
+        return favoriteLeagueRepository.existsByUserIdAndLeagueId(userId, match.getLeague().getId())
+                || favoriteTeamRepository.existsByUserIdAndTeamId(userId, match.getHomeTeam().getId())
+                || favoriteTeamRepository.existsByUserIdAndTeamId(userId, match.getAwayTeam().getId());
+    }
+
+    private Long resolveNullableUserId() {
+        try {
+            return currentUserProvider.resolveUserId();
+        } catch (BusinessException e) {
+            return null;
+        }
+    }
+
+    private ActiveRoomResponse activeRoom(PredictionRoom room, Long matchId, Long userId) {
+        PredictionStatus status = scorePredictionRepository.findByRoomIdAndUserIdAndFootballMatchId(room.getId(), userId, matchId)
+                .map(prediction -> PredictionStatus.SUBMITTED)
+                .orElse(PredictionStatus.NOT_SUBMITTED);
+        return new ActiveRoomResponse(
+                room.getId(),
+                room.getTitle(),
+                room.getHost().getId(),
+                room.getHost().getNickname(),
+                room.getHost().getProfileImageUrl(),
+                participantRepository.countByRoomId(room.getId()),
+                room.getCapacity(),
+                room.getStatus(),
+                status
+        );
     }
 
     @Transactional(readOnly = true)

@@ -35,7 +35,7 @@ class DeviationCalculatorTest {
 
     @Test
     void tieBreakerPrefersMoreMissingPredictions() {
-        PredictionResultService service = new PredictionResultService(null, null, null, null, null, null, calculator);
+        PredictionResultService service = new PredictionResultService(null, null, null, null, null, null, calculator, null);
 
         List<ParticipantStats> losers = service.selectLosers(List.of(
                 stats(1L, 10, 0, 10, LocalDateTime.now(), 1),
@@ -48,7 +48,7 @@ class DeviationCalculatorTest {
     @Test
     void tieBreakerKeepsMultipleLosersWhenStillTied() {
         LocalDateTime submittedAt = LocalDateTime.now();
-        PredictionResultService service = new PredictionResultService(null, null, null, null, null, null, calculator);
+        PredictionResultService service = new PredictionResultService(null, null, null, null, null, null, calculator, null);
 
         List<ParticipantStats> losers = service.selectLosers(List.of(
                 stats(1L, 8, 0, 4, submittedAt, 2),

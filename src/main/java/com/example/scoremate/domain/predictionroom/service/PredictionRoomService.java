@@ -3,6 +3,8 @@ package com.example.scoremate.domain.predictionroom.service;
 import com.example.scoremate.domain.football.dto.FootballDtos.TeamResponse;
 import com.example.scoremate.domain.football.entity.FootballMatch;
 import com.example.scoremate.domain.football.service.FootballMatchService;
+import com.example.scoremate.domain.notification.entity.NotificationType;
+import com.example.scoremate.domain.notification.service.NotificationService;
 import com.example.scoremate.domain.prediction.dto.PredictionStatus;
 import com.example.scoremate.domain.prediction.entity.ScorePrediction;
 import com.example.scoremate.domain.prediction.repository.ScorePredictionRepository;
@@ -42,6 +44,7 @@ public class PredictionRoomService {
     private final ScorePredictionRepository scorePredictionRepository;
     private final FootballMatchService footballMatchService;
     private final CurrentUserProvider currentUserProvider;
+    private final NotificationService notificationService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
@@ -94,6 +97,15 @@ public class PredictionRoomService {
             throw new BusinessException(ErrorCode.ROOM_FULL);
         }
         participantRepository.save(PredictionRoomParticipant.builder().room(room).user(user).joinedAt(LocalDateTime.now()).build());
+        if (!room.getHost().getId().equals(user.getId())) {
+            notificationService.create(
+                    room.getHost(),
+                    NotificationType.FRIEND_JOINED,
+                    "새 참여자가 들어왔어요.",
+                    user.getNickname() + "님이 '" + room.getTitle() + "' 예측방에 참여했어요.",
+                    "/rooms/" + room.getId()
+            );
+        }
     }
 
     @Transactional(readOnly = true)

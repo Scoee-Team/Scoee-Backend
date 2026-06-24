@@ -8,11 +8,23 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
         format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+  cache:
+    type: redis
+    redis:
+      time-to-live: 10m
   security:
     user:
       name: user
@@ -28,12 +40,28 @@ scoremate:
     base-url: https://api.football-data.org/v4
     api-token: ${FOOTBALL_DATA_API_TOKEN:}
     mock-enabled: false
+    cache-ttl: 10m
   prediction:
     missing-penalty: 10
   jwt:
     secret: ${JWT_SECRET:change-this-secret-in-production}
     access-token-ttl-seconds: 3600
     refresh-token-ttl-seconds: 1209600
+  storage:
+    profile-image-dir: ${PROFILE_IMAGE_DIR:uploads/profile-images}
   scheduler:
     sync-upcoming-cron: "0 0 4 * * *"
     sync-today-delay-ms: 1800000
+    calculate-results-delay-ms: 300000
+  oauth:
+    kakao:
+      client-id: ${KAKAO_CLIENT_ID:}
+      client-secret: ${KAKAO_CLIENT_SECRET:}
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+    apple:
+      client-id: ${APPLE_CLIENT_ID:}
+      team-id: ${APPLE_TEAM_ID:}
+      key-id: ${APPLE_KEY_ID:}
+      private-key: ${APPLE_PRIVATE_KEY:}

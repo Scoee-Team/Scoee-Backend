@@ -2,6 +2,8 @@ package com.example.scoremate.domain.prediction.service;
 
 import com.example.scoremate.domain.football.dto.FootballDtos.TeamResponse;
 import com.example.scoremate.domain.football.entity.FootballMatch;
+import com.example.scoremate.domain.notification.entity.NotificationType;
+import com.example.scoremate.domain.notification.service.NotificationService;
 import com.example.scoremate.domain.prediction.dto.PredictionDtos.*;
 import com.example.scoremate.domain.prediction.entity.PredictionRoomResult;
 import com.example.scoremate.domain.prediction.entity.ScorePrediction;
@@ -37,6 +39,7 @@ public class PredictionResultService {
     private final ScorePredictionRepository scorePredictionRepository;
     private final PredictionRoomResultRepository resultRepository;
     private final DeviationCalculator deviationCalculator;
+    private final NotificationService notificationService;
 
     @Transactional
     public PredictionRoomResultResponse calculateAndGet(Long roomId) {
@@ -61,13 +64,18 @@ public class PredictionResultService {
         List<ParticipantStats> stats = calculateStats(room, roomMatches);
         List<ParticipantStats> loserStats = selectLosers(stats);
         ParticipantStats primaryLoser = loserStats.get(0);
-        PredictionRoomResult result = resultRepository.findByRoomId(roomId)
+        Optional<PredictionRoomResult> existingResult = resultRepository.findByRoomId(roomId);
+        boolean firstCalculation = existingResult.isEmpty();
+        PredictionRoomResult result = existingResult
                 .orElseGet(() -> PredictionRoomResult.builder().room(room).build());
         result.setLoser(primaryLoser.user());
         result.setLoserTotalDeviation(primaryLoser.totalDeviation());
         result.setCalculatedAt(LocalDateTime.now());
         resultRepository.save(result);
         room.setStatus(PredictionRoomStatus.COMPLETED);
+        if (firstCalculation) {
+            notifyResult(room, participantRepository.findByRoomId(roomId), loserStats);
+        }
         return toResponse(room, roomMatches, stats, loserStats);
     }
 
@@ -187,5 +195,19 @@ public class PredictionResultService {
     }
 
     public record ParticipantStats(User user, int totalDeviation, int missingPredictionCount, int maxSingleDeviation, LocalDateTime lastSubmittedAt, int submittedCount) {
+    }
+
+    private void notifyResult(PredictionRoom room, List<PredictionRoomParticipant> participants, List<ParticipantStats> losers) {
+        Set<Long> loserIds = losers.stream().map(stat -> stat.user().getId()).collect(Collectors.toSet());
+        for (PredictionRoomParticipant participant : participants) {
+            boolean loser = loserIds.contains(participant.getUser().getId());
+            notificationService.create(
+                    participant.getUser(),
+                    loser ? NotificationType.LOSER_SELECTED : NotificationType.MATCH_RESULT_FINALIZED,
+                    loser ? "예측방 꼴찌가 선정됐어요." : "예측방 결과가 확정됐어요.",
+                    loser ? "'" + room.getTitle() + "'에서 가장 크게 빗나갔어요." : "'" + room.getTitle() + "' 결과를 확인해보세요.",
+                    "/rooms/" + room.getId() + "/result"
+            );
+        }
     }
 }

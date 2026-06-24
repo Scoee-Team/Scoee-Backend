@@ -84,7 +84,7 @@ public class FootballController {
     @Tag(name = "Matches")
     @Operation(summary = "경기 상세", description = "MATCH_NOT_FOUND")
     @GetMapping("/matches/{matchId}")
-    public ApiResponse<MatchSummaryResponse> match(@PathVariable Long matchId) {
+    public ApiResponse<MatchDetailResponse> match(@PathVariable Long matchId) {
         return ApiResponse.success(footballMatchService.detail(matchId));
     }
 

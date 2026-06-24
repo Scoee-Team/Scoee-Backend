@@ -49,6 +49,10 @@ public class JwtTokenProvider {
         return accessTokenTtlSeconds;
     }
 
+    public long refreshTokenTtlSeconds() {
+        return refreshTokenTtlSeconds;
+    }
+
     public AuthenticatedUser parseAccessToken(String token) {
         Map<String, Object> claims = parseClaims(token);
         if (!"access".equals(claims.get("typ"))) {

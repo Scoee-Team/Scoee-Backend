@@ -4,6 +4,7 @@ import com.example.scoremate.domain.notification.dto.NotificationDtos.Notificati
 import com.example.scoremate.domain.notification.dto.NotificationDtos.NotificationSettingRequest;
 import com.example.scoremate.domain.notification.dto.NotificationDtos.NotificationSettingResponse;
 import com.example.scoremate.domain.notification.entity.Notification;
+import com.example.scoremate.domain.notification.entity.NotificationType;
 import com.example.scoremate.domain.notification.entity.NotificationSetting;
 import com.example.scoremate.domain.notification.repository.NotificationRepository;
 import com.example.scoremate.domain.notification.repository.NotificationSettingRepository;
@@ -75,6 +76,18 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public long unreadCount(Long userId) {
         return notificationRepository.countByUserIdAndReadFalse(userId);
+    }
+
+    @Transactional
+    public void create(User user, NotificationType type, String title, String body, String deepLink) {
+        notificationRepository.save(Notification.builder()
+                .user(user)
+                .type(type)
+                .title(title)
+                .body(body)
+                .read(false)
+                .deepLink(deepLink)
+                .build());
     }
 
     private NotificationSetting getOrCreateSetting(User user) {

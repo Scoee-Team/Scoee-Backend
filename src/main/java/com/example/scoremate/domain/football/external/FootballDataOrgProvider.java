@@ -5,6 +5,7 @@ import com.example.scoremate.global.exception.BusinessException;
 import com.example.scoremate.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -21,18 +22,21 @@ public class FootballDataOrgProvider implements FootballDataProvider {
     private final FootballDataOrgClientProperties properties;
 
     @Override
+    @Cacheable(cacheNames = "footballDataMatches", key = "#date")
     public List<ExternalMatchResponse> getUpcomingMatches(LocalDate date) {
         FootballDataOrgMatchesResponse response = get("/matches?dateFrom={dateFrom}&dateTo={dateTo}", FootballDataOrgMatchesResponse.class, date, date.plusDays(1));
         return response.matches().stream().map(this::toExternalMatch).toList();
     }
 
     @Override
+    @Cacheable(cacheNames = "footballDataCompetitionMatches", key = "#competitionId + ':' + #season")
     public List<ExternalMatchResponse> getMatchesByCompetition(Long competitionId, Integer season) {
         FootballDataOrgMatchesResponse response = get("/competitions/{id}/matches?season={season}", FootballDataOrgMatchesResponse.class, competitionId, season);
         return response.matches().stream().map(this::toExternalMatch).toList();
     }
 
     @Override
+    @Cacheable(cacheNames = "footballDataMatchDetail", key = "#externalMatchId")
     public ExternalMatchResponse getMatchDetail(Long externalMatchId) {
         FootballDataOrgMatch response = get("/matches/{id}", FootballDataOrgMatch.class, externalMatchId);
         return toExternalMatch(response);

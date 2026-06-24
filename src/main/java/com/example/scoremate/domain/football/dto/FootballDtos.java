@@ -5,6 +5,7 @@ import com.example.scoremate.domain.football.entity.League;
 import com.example.scoremate.domain.football.entity.MatchStatus;
 import com.example.scoremate.domain.football.entity.Team;
 import com.example.scoremate.domain.prediction.dto.PredictionStatus;
+import com.example.scoremate.domain.predictionroom.entity.PredictionRoomStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -56,5 +57,35 @@ public final class FootballDtos {
     }
 
     public record CalendarMatchCountResponse(LocalDate date, long matchCount, long favoriteMatchCount) {
+    }
+
+    public record ActiveRoomResponse(
+            Long id,
+            String title,
+            Long hostId,
+            String hostNickname,
+            String hostProfileImageUrl,
+            long participantCount,
+            int capacity,
+            PredictionRoomStatus status,
+            PredictionStatus myPredictionStatus
+    ) {
+    }
+
+    public record MatchDetailResponse(
+            Long id,
+            LeagueResponse league,
+            TeamResponse homeTeam,
+            TeamResponse awayTeam,
+            LocalDateTime kickoffTime,
+            MatchStatus status,
+            Integer homeScore,
+            Integer awayScore,
+            String venue,
+            LocalDateTime predictionDeadline,
+            boolean locked,
+            PredictionStatus myPredictionStatus,
+            java.util.List<ActiveRoomResponse> activeRooms
+    ) {
     }
 }

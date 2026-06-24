@@ -11,6 +11,8 @@ public enum ErrorCode {
     AUTH_REQUIRED(HttpStatus.UNAUTHORIZED, "AUTH_REQUIRED", "인증이 필요합니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다."),
     INVALID_OAUTH_PROVIDER(HttpStatus.BAD_REQUEST, "INVALID_OAUTH_PROVIDER", "지원하지 않는 로그인 방식입니다."),
+    OAUTH_CONFIGURATION_REQUIRED(HttpStatus.INTERNAL_SERVER_ERROR, "OAUTH_CONFIGURATION_REQUIRED", "OAuth 설정이 필요합니다."),
+    OAUTH_VERIFICATION_FAILED(HttpStatus.UNAUTHORIZED, "OAUTH_VERIFICATION_FAILED", "OAuth 사용자 검증에 실패했습니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "유효하지 않은 토큰입니다."),
     
     // Domain

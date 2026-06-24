@@ -56,7 +56,7 @@ public class ScorePredictionService {
                     status(prediction, locked, match.isFinished()),
                     prediction == null ? null : prediction.getPredictedHomeScore(),
                     prediction == null ? null : prediction.getPredictedAwayScore(),
-                    new CrowdSummaryResponse(0, 0, 0)
+                    crowdSummary(roomId, match.getId())
             );
         }).toList();
         return new MyPredictionsResponse(room.getId(), room.getTitle(), room.getStatus(), matches);
@@ -109,5 +109,21 @@ public class ScorePredictionService {
         if (homeScore < 0 || awayScore < 0 || homeScore > 20 || awayScore > 20) {
             throw new BusinessException(ErrorCode.INVALID_SCORE);
         }
+    }
+
+    private CrowdSummaryResponse crowdSummary(Long roomId, Long matchId) {
+        List<ScorePrediction> predictions = scorePredictionRepository.findByRoomId(roomId).stream()
+                .filter(prediction -> prediction.getFootballMatch().getId().equals(matchId))
+                .toList();
+        if (predictions.isEmpty()) {
+            return new CrowdSummaryResponse(0, 0, 0);
+        }
+        long homeWins = predictions.stream().filter(prediction -> prediction.getPredictedHomeScore() > prediction.getPredictedAwayScore()).count();
+        long draws = predictions.stream().filter(prediction -> prediction.getPredictedHomeScore().equals(prediction.getPredictedAwayScore())).count();
+        long awayWins = predictions.size() - homeWins - draws;
+        int homePercent = Math.round(homeWins * 100f / predictions.size());
+        int drawPercent = Math.round(draws * 100f / predictions.size());
+        int awayPercent = 100 - homePercent - drawPercent;
+        return new CrowdSummaryResponse(homePercent, drawPercent, awayPercent);
     }
 }
